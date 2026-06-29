@@ -165,3 +165,9 @@ npm run dev:server  # Runs Express server at http://localhost:5000
 │
 └── vercel.json           # Vercel deployment and rewrite routes config
 ```
+
+---
+
+## 👥 Creator
+
+Made with ⚡ by **Prafull Harer** (GitHub: [@PrafullHarer](https://github.com/PrafullHarer))
