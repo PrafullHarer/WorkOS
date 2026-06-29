@@ -235,26 +235,26 @@ const TaskDetail = () => {
             <div className="border-2 border-black dark:border-white p-3 bg-white dark:bg-neutral-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
               {/* Calendar Header */}
               <div className="flex flex-col sm:flex-row gap-3 justify-between sm:items-center mb-4">
-                <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-black dark:text-white" /> Habit Calendar
+                <h3 className="text-xl lg:text-2xl font-black uppercase tracking-tight flex items-center gap-2">
+                  <Calendar className="w-6 h-6 text-black dark:text-white" /> Habit Calendar
                 </h3>
                 <div className="flex items-center gap-1.5 justify-between w-full sm:w-auto">
                   <button 
                     onClick={(e) => { e.stopPropagation(); prevMonth(); }}
-                    className="w-8 h-8 flex items-center justify-center bg-white dark:bg-neutral-900 border-2 border-black dark:border-white hover:bg-yellow-400 dark:hover:bg-yellow-400 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all cursor-pointer text-black dark:text-white"
+                    className="w-9 h-9 flex items-center justify-center bg-white dark:bg-neutral-900 border-2 border-black dark:border-white hover:bg-yellow-400 dark:hover:bg-yellow-400 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all cursor-pointer text-black dark:text-white"
                     aria-label="Previous Month"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="font-mono font-black text-xs uppercase tracking-wider px-3 py-1 bg-yellow-400 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] min-w-[120px] text-center flex-1 sm:flex-initial">
+                  <span className="font-mono font-black text-sm sm:text-base uppercase tracking-wider px-4 py-1.5 bg-yellow-400 text-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] min-w-[140px] text-center flex-1 sm:flex-initial">
                     {MONTHS[currentMonth]} {currentYear}
                   </span>
                   <button 
                     onClick={(e) => { e.stopPropagation(); nextMonth(); }}
-                    className="w-8 h-8 flex items-center justify-center bg-white dark:bg-neutral-900 border-2 border-black dark:border-white hover:bg-yellow-400 dark:hover:bg-yellow-400 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all cursor-pointer text-black dark:text-white"
+                    className="w-9 h-9 flex items-center justify-center bg-white dark:bg-neutral-900 border-2 border-black dark:border-white hover:bg-yellow-400 dark:hover:bg-yellow-400 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] active:translate-x-0 active:translate-y-0 active:shadow-none transition-all cursor-pointer text-black dark:text-white"
                     aria-label="Next Month"
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>
               </div>
