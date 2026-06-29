@@ -153,6 +153,7 @@ const TaskModal = ({ isOpen, onClose, editTask = null }) => {
                 </label>
                 <select value={form.reminderMinutes} onChange={e => set('reminderMinutes', e.target.value)} className="input-field py-2.5 text-base cursor-pointer" id="task-reminder-select">
                   <option value="">No reminder</option>
+                  <option value="0.166667">10 seconds</option>
                   <option value="5">5 min</option>
                   <option value="15">15 min</option>
                   <option value="30">30 min</option>

@@ -27,9 +27,13 @@ export const scheduleNotification = (task, minutesBefore) => {
 
   if (notifyTime <= now) return null;
 
+  const bodyText = minutesBefore < 1 
+    ? `Due in ${Math.round(minutesBefore * 60)} seconds` 
+    : `Due in ${minutesBefore} minutes`;
+
   const timeout = setTimeout(() => {
     new Notification(`Task Reminder: ${task.title}`, {
-      body: `Due in ${minutesBefore} minutes`,
+      body: bodyText,
       icon: '/vite.svg',
       tag: task._id,
     });
