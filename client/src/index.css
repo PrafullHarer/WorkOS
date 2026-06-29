@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: #ffffff;
+    --color-text: #000000;
+    --color-text-muted: rgba(0, 0, 0, 0.75);
+    --color-border: transparent;
+    --color-accent: #000000;
+    --color-accent-muted: rgba(0, 0, 0, 0.08);
+    --color-surface-hover: rgba(0, 0, 0, 0.08);
+  }
+
+  .dark {
+    --color-bg: #000000;
+    --color-text: #ffffff;
+    --color-text-muted: rgba(255, 255, 255, 0.75);
+    --color-border: transparent;
+    --color-accent: #ffffff;
+    --color-accent-muted: rgba(255, 255, 255, 0.2);
+    --color-surface-hover: rgba(255, 255, 255, 0.15);
+  }
+
+  * {
+    border-color: #000000;
+  }
+  .dark * {
+    border-color: #ffffff;
+  }
+
+  body {
+    @apply bg-white text-black dark:bg-black dark:text-white text-lg font-bold;
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+    background-image: radial-gradient(rgba(0, 0, 0, 0.06) 1.5px, transparent 1.5px);
+    background-size: 28px 28px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .dark body {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1.5px, transparent 1.5px);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-black dark:bg-white;
+  }
+}
+
+@layer components {
+  /* ─── Cards ─── */
+  .card {
+    @apply bg-white text-black dark:bg-black dark:text-white rounded-none p-6 text-lg font-bold border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] transition-all duration-150;
+  }
+
+  .card-elevated {
+    @apply bg-white text-black dark:bg-black dark:text-white rounded-none p-6 text-lg font-bold border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all duration-150;
+  }
+
+  /* ─── Buttons ─── */
+  .btn-primary {
+    @apply bg-black text-white dark:bg-white dark:text-black px-6 py-3.5 rounded-none font-black text-base uppercase tracking-widest border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none cursor-pointer transition-all duration-150 focus:outline-none;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-black dark:bg-black dark:text-white px-6 py-3.5 rounded-none font-black text-base uppercase tracking-widest border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none cursor-pointer transition-all duration-150 focus:outline-none;
+  }
+
+  .btn-danger {
+    @apply bg-red-100 text-black dark:bg-red-950 dark:text-white px-6 py-3.5 rounded-none font-black text-base uppercase tracking-widest border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_#000000] dark:shadow-[4px_4px_0px_0px_#ffffff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none cursor-pointer transition-all duration-150 focus:outline-none;
+  }
+
+  .btn-ghost {
+    @apply text-black/70 dark:text-white/70 px-4 py-2.5 rounded-none font-black text-base uppercase tracking-widest hover:text-black dark:hover:text-white cursor-pointer transition-all duration-150 focus:outline-none;
+  }
+
+  /* ─── Inputs ─── */
+  .input-field {
+    @apply w-full px-5 py-4 bg-white dark:bg-black rounded-none text-black dark:text-white placeholder-black/45 dark:placeholder-white/45 cursor-text font-bold text-lg border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] focus:outline-none focus:translate-x-[1px] focus:translate-y-[1px] focus:shadow-none transition-all duration-150;
+  }
+
+  /* ─── Sidebar ─── */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-6 py-4 rounded-none text-black/60 dark:text-white/60 hover:bg-neutral-100 dark:hover:bg-neutral-900 hover:text-black dark:hover:text-white cursor-pointer transition-all duration-150 font-black text-base uppercase tracking-widest;
+  }
+
+  .sidebar-link-active {
+    @apply flex items-center gap-3 px-6 py-4 rounded-none font-black text-base uppercase tracking-widest bg-black text-white dark:bg-white dark:text-black;
+  }
+
+  /* ─── Priority Indicators ─── */
+  .priority-low {
+    @apply opacity-50;
+  }
+  .priority-medium {
+    @apply opacity-80;
+  }
+  .priority-high {
+    @apply opacity-100;
+  }
+
+  /* ─── Task states ─── */
+  .task-done {
+    @apply opacity-35;
+  }
+  .task-done .task-title {
+    @apply line-through text-black dark:text-white decoration-4;
+  }
+
+  /* ─── Skeletons ─── */
+  .skeleton {
+    @apply bg-black/15 dark:bg-white/15 rounded-none animate-pulse;
+  }
+
+  /* ─── Chips & badges ─── */
+  .chip {
+    @apply inline-flex items-center px-3.5 py-1.5 rounded-none text-sm font-mono font-black uppercase bg-white text-black dark:bg-black dark:text-white border border-black dark:border-white;
+  }
+
+  .streak-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-none text-sm font-mono font-black bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white;
+  }
+}
+
+/* ─── Animations (respects prefers-reduced-motion) ─── */
+@media (prefers-reduced-motion: no-preference) {
+  .animate-fade-in {
+    animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .animate-slide-up {
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Modal overlay ─── */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-[1px];
+}
+@media (prefers-reduced-motion: no-preference) {
+  .modal-overlay { animation: fadeIn 0.2s ease-out; }
+}
+
+.modal-content {
+  @apply bg-white text-black dark:bg-black dark:text-white p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto border-4 border-black dark:border-white shadow-[8px_8px_0px_0px_#000000] dark:shadow-[8px_8px_0px_0px_#ffffff];
+}
+@media (prefers-reduced-motion: no-preference) {
+  .modal-content { animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+}
+
+/* ─── Task completion transition ─── */
+@media (prefers-reduced-motion: no-preference) {
+  .task-complete-enter {
+    animation: taskComplete 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+@keyframes taskComplete {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); opacity: 0.35; }
+}

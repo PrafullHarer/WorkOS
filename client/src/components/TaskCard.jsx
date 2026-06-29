@@ -1,0 +1,145 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Check, Trash2, Edit3, SkipForward, Repeat, Flame, MoreHorizontal, GripVertical, Info } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const TaskCard = ({ task, isOccurrence, onComplete, onDelete, onEdit, onSkip, onIncrement, onInfo }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const [flipUp, setFlipUp] = useState(false);
+  const menuRef = useRef(null);
+  const menuBtnRef = useRef(null);
+
+  const toggleMenu = useCallback(() => {
+    if (!showMenu && menuBtnRef.current) {
+      const rect = menuBtnRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setFlipUp(spaceBelow < 200);
+    }
+    setShowMenu(prev => !prev);
+  }, [showMenu]);
+
+  // Close on click-outside
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target) && menuBtnRef.current && !menuBtnRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
+
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleVal, setTitleVal] = useState(task.title);
+
+  const isDone = isOccurrence ? task.status === 'done' : task.status === 'done';
+  const isSkipped = task.status === 'skipped';
+  const priorityClass = `priority-${task.priority}`;
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: isOccurrence ? `${task._id}-${task.date}` : task._id,
+  });
+
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  const handleTitleSave = () => {
+    setEditingTitle(false);
+    if (titleVal.trim() && titleVal !== task.title) {
+      onEdit?.({ ...task, title: titleVal });
+    }
+  };
+
+  const menuPositionClass = flipUp ? 'bottom-full mb-1' : 'top-full mt-1';
+
+  return (
+    <div ref={setNodeRef} style={style}
+      className={`card-elevated ${priorityClass} p-5 group ${isDone ? 'task-done' : ''} ${isSkipped ? 'opacity-40' : ''}`}>
+      <div className="flex items-start gap-3">
+        <button {...listeners} {...attributes} className="mt-1 cursor-grab text-black/30 dark:text-white/30 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+          <GripVertical className="w-5 h-5" />
+        </button>
+
+        <button onClick={() => onComplete?.(task)} className={`mt-1.5 flex-shrink-0 w-6 h-6 flex items-center justify-center cursor-pointer transition-all duration-150 ${isDone ? 'bg-black text-white dark:bg-white dark:text-black scale-105' : 'bg-neutral-200 dark:bg-neutral-800 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black'}`} id={`complete-${task._id}`}>
+          {isDone && <Check className="w-4 h-4" />}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center">
+            {editingTitle ? (
+              <input value={titleVal} onChange={e => setTitleVal(e.target.value)} onBlur={handleTitleSave} onKeyDown={e => e.key === 'Enter' && handleTitleSave()} className="input-field py-1 px-2 text-base font-bold" autoFocus />
+            ) : (
+              <h3 className="task-title font-black text-lg lg:text-xl cursor-pointer truncate" onClick={() => setEditingTitle(true)}>{task.title}</h3>
+            )}
+          </div>
+          {(task.type === 'repeating' || task.streak > 0) && (
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+              {task.type === 'repeating' && <Repeat className="w-4 h-4 text-black dark:text-white flex-shrink-0" />}
+              {task.streak > 0 && (
+                <span className="streak-badge flex-shrink-0"><Flame className="w-3.5 h-3.5" />{task.streak}</span>
+              )}
+              {task.type === 'repeating' && task.targetCount > 1 && (
+                <span className="text-sm font-mono font-black text-black/60 dark:text-white/60">
+                  {task.count || 0}/{task.targetCount} times
+                </span>
+              )}
+            </div>
+          )}
+
+          {task.description && <p className="text-sm text-black/60 dark:text-white/60 mt-1.5 line-clamp-2 font-bold">{task.description}</p>}
+
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            {task.category && (
+              <span className="chip text-black dark:text-white">{task.category.name}</span>
+            )}
+            {task.tags?.map(tag => <span key={tag} className="chip">{tag}</span>)}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {task.type === 'repeating' && task.targetCount > 1 && !isDone && !isSkipped && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onIncrement?.(task);
+              }}
+              className="w-8 h-8 flex items-center justify-center bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white font-black text-xl hover:translate-x-[1px] hover:translate-y-[1px] cursor-pointer shadow-[2px_2px_0px_0px_#000000] dark:shadow-[2px_2px_0px_0px_#ffffff] hover:shadow-none transition-all duration-150"
+              title="Increment Progress"
+            >
+              +
+            </button>
+          )}
+
+          <div className="relative">
+            <button ref={menuBtnRef} onClick={toggleMenu} className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all duration-150 cursor-pointer">
+              <MoreHorizontal className="w-5 h-5 text-black dark:text-white" />
+            </button>
+            {showMenu && (
+              <div ref={menuRef} className={`absolute right-0 ${menuPositionClass} z-50 w-36 bg-white dark:bg-neutral-950 border-2 border-black dark:border-white py-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]`}>
+                {task.type === 'repeating' && (
+                  <button onClick={() => { onInfo?.(task); setShowMenu(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-wider hover:bg-yellow-400 hover:text-black dark:hover:bg-yellow-400 dark:hover:text-black cursor-pointer transition-colors duration-100 text-left text-black dark:text-white">
+                    <Info className="w-3.5 h-3.5 flex-shrink-0" /> Info
+                  </button>
+                )}
+                <button onClick={() => { onEdit?.(task); setShowMenu(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-wider hover:bg-yellow-400 hover:text-black dark:hover:bg-yellow-400 dark:hover:text-black cursor-pointer transition-colors duration-100 text-left text-black dark:text-white">
+                  <Edit3 className="w-3.5 h-3.5 flex-shrink-0" /> Edit
+                </button>
+                {isOccurrence && onSkip && (
+                  <button onClick={() => { onSkip?.(task); setShowMenu(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-wider hover:bg-yellow-400 hover:text-black dark:hover:bg-yellow-400 dark:hover:text-black cursor-pointer transition-colors duration-100 text-left text-black dark:text-white">
+                    <SkipForward className="w-3.5 h-3.5 flex-shrink-0" /> Skip
+                  </button>
+                )}
+                <div className="border-t border-black/10 dark:border-white/10 my-1" />
+                <button onClick={() => { onDelete?.(task); setShowMenu(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-wider hover:bg-red-500 hover:text-white cursor-pointer transition-colors duration-100 text-left text-red-600 dark:text-red-400">
+                  <Trash2 className="w-3.5 h-3.5 flex-shrink-0" /> Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TaskCard;
