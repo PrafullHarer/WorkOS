@@ -159,7 +159,7 @@ TaskMaste is pre-configured to be deployed as a single monorepo project on **Ver
    * **Root Directory:** Keep it as root `./`.
    * **Build and Development Settings:**
      * **Build Command:** `npm run build`
-     * **Output Directory:** `client/dist`
+     * **Output Directory:** `dist`
      * **Install Command:** `npm run install:all` (crucial to install dependencies in both the `server` and `client` subdirectories).
 4. **Environment Variables:**
    Add the following variables under the **"Environment Variables"** tab:
