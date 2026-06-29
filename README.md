@@ -15,6 +15,9 @@ A high-performance, full-stack task management application featuring a striking 
 ### 📅 Responsive Calendar View
 ![TaskMaste Calendar](./docs/images/calendar.png)
 
+### 🔍 Detailed Task Info & Habit Calendar
+![TaskMaste Task Detail Page](./docs/images/task_detail.png)
+
 ---
 
 ## 🎨 Neo-Brutalist Design & Aesthetics
