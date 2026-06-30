@@ -53,6 +53,9 @@ The application layout has been refined to eliminate collisions and provide a se
 - **Drag & Drop Reordering**: Reorder and prioritize daily task sequences with smooth animations via `@dnd-kit`.
 - **System Notifications**: Integrated browser reminder notifications triggering before task due times.
 - **Multi-Format Export**: Export tasks to standard `.csv` or `.json` formats instantly.
+- **Secure Admin Portal**: Dedicated console accessed via admin username/password for viewing real-time health metrics including system uptime, database availability, and network load.
+- **Live Database Diagnostics**: Real-time monitoring of database connection status, connection pool details (active / max connections), and connection failures.
+- **HTTP Traffic Logs & Analytics**: Rolling history of the last 100 HTTP requests (with method, path, status, and duration in ms) and request rate analysis by status group (2xx, 3xx, 4xx, 5xx).
 
 ---
 
@@ -141,6 +144,12 @@ npm run dev:server  # Runs Express server at http://localhost:5000
 | **POST** | `/` | Create a new custom task category |
 | **PUT** | `/:id` | Update category label or theme color |
 | **DELETE**| `/:id` | Delete category |
+
+### 🛡️ Admin Router (`/api/admin`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| **POST** | `/verify` | Verify administrator credentials |
+| **GET** | `/stats` | Fetch real-time database connection pool, system uptime, and HTTP log stats |
 
 ---
 
