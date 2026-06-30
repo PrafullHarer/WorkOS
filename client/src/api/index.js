@@ -109,4 +109,20 @@ export const categoryAPI = {
   deleteCategory: (id) => api.delete(`/api/categories/${id}`),
 };
 
+// Admin API
+export const adminAPI = {
+  verify: (username, password) => api.post('/api/admin/verify', {}, {
+    headers: {
+      'x-admin-username': username,
+      'x-admin-password': password
+    }
+  }),
+  getStats: (username, password) => api.get('/api/admin/stats', {
+    headers: {
+      'x-admin-username': username,
+      'x-admin-password': password
+    }
+  })
+};
+
 export default api;

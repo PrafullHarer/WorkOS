@@ -10,6 +10,7 @@ import Upcoming from './pages/Upcoming';
 import Settings from './pages/Settings';
 import TaskDetail from './pages/TaskDetail';
 import Home from './pages/Home';
+import Admin from './pages/Admin';
 
 const AppLayout = ({ children }) => (
   <div className="flex flex-col min-h-screen bg-transparent">
@@ -64,6 +65,7 @@ const App = () => {
         </ProtectedRoute>
       } />
       <Route path="/" element={<Home />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
