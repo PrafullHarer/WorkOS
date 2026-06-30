@@ -15,6 +15,7 @@ const {
   reorderTasks,
   taskValidation,
   getTaskById,
+  updateOccurrenceNote,
 } = require('../controllers/taskController');
 
 // All routes require auth
@@ -32,5 +33,6 @@ router.delete('/:id', deleteTask);
 router.patch('/:id/complete', completeTask);
 router.patch('/:id/complete/:date', completeOccurrence);
 router.patch('/:id/skip/:date', skipOccurrence);
+router.patch('/:id/note/:date', updateOccurrenceNote);
 
 module.exports = router;

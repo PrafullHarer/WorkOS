@@ -96,6 +96,7 @@ export const taskAPI = {
   completeTask: (id) => api.patch(`/api/tasks/${id}/complete`),
   completeOccurrence: (id, date, increment, clear) => api.patch(`/api/tasks/${id}/complete/${date}`, {}, { params: { increment, clear } }),
   skipOccurrence: (id, date) => api.patch(`/api/tasks/${id}/skip/${date}`),
+  updateOccurrenceNote: (id, date, note) => api.patch(`/api/tasks/${id}/note/${date}`, { note }),
   bulkAction: (data) => api.patch('/api/tasks/bulk', data),
   reorderTasks: (orderedIds) => api.patch('/api/tasks/reorder', { orderedIds }),
 };

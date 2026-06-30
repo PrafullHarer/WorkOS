@@ -18,6 +18,9 @@ const Settings = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState('#6366f1');
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [includeOneTime, setIncludeOneTime] = useState(false);
 
   const isDark = document.documentElement.classList.contains('dark');
 
@@ -41,6 +44,122 @@ const Settings = () => {
       else exportToCSV(data.tasks);
       toast.success(`Exported as ${format.toUpperCase()}`);
     } catch { toast.error('Export failed'); }
+  };
+
+  const handleExportGlobalNotes = async () => {
+    try {
+      const { data } = await taskAPI.getAllTasks();
+      const allTasks = data.tasks || [];
+      
+      const notesByDate = {};
+      allTasks.forEach((task) => {
+        // Repeating tasks logic
+        if (task.type === 'repeating' && task.completions) {
+          task.completions.forEach((c) => {
+            const hasNote = c.note && c.note.trim() !== '';
+            const atLeastOneUnit = c.status === 'done' || (c.count !== undefined && c.count >= 1);
+            if (hasNote || atLeastOneUnit) {
+              const compDate = c.date;
+              if (exportStartDate && compDate < exportStartDate) return;
+              if (exportEndDate && compDate > exportEndDate) return;
+
+              if (!notesByDate[compDate]) {
+                notesByDate[compDate] = [];
+              }
+              notesByDate[compDate].push({
+                taskTitle: task.title,
+                taskType: 'repeating',
+                status: c.status,
+                count: c.count || 0,
+                targetCount: task.targetCount || 1,
+                note: c.note || '',
+              });
+            }
+          });
+        }
+
+        // One-time tasks logic (only if includeOneTime is checked)
+        if (task.type === 'one-time' && includeOneTime && task.note && task.note.trim() !== '') {
+          let taskDate = '';
+          if (task.dueDate) {
+            taskDate = new Date(task.dueDate).toISOString().split('T')[0];
+          } else if (task.createdAt) {
+            taskDate = new Date(task.createdAt).toISOString().split('T')[0];
+          } else {
+            taskDate = new Date().toISOString().split('T')[0];
+          }
+
+          if (exportStartDate && taskDate < exportStartDate) return;
+          if (exportEndDate && taskDate > exportEndDate) return;
+
+          if (!notesByDate[taskDate]) {
+            notesByDate[taskDate] = [];
+          }
+          notesByDate[taskDate].push({
+            taskTitle: task.title,
+            taskType: 'one-time',
+            status: task.status || 'todo',
+            count: task.status === 'done' ? 1 : 0,
+            targetCount: 1,
+            note: task.note,
+          });
+        }
+      });
+
+      const sortedDates = Object.keys(notesByDate).sort();
+
+      if (sortedDates.length === 0) {
+        toast.error('No notes found for the selected criteria.');
+        return;
+      }
+
+      let fileContent = `ALL TASKS DAILY NOTES EXPORT\n`;
+      fileContent += `Date Range: ${exportStartDate || 'All Time'} to ${exportEndDate || 'All Time'}\n`;
+      fileContent += `Generated on: ${new Date().toLocaleDateString()}\n`;
+      fileContent += `=========================================\n\n`;
+
+      sortedDates.forEach((dateStr) => {
+        let dateLabel = dateStr;
+        try {
+          const dateObj = new Date(dateStr + 'T12:00:00');
+          dateLabel = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+        } catch {}
+
+        fileContent += `DATE: ${dateLabel} (${dateStr})\n`;
+        fileContent += `=========================================\n`;
+
+        notesByDate[dateStr].forEach((item) => {
+          const typeLabel = item.taskType === 'one-time' ? '[ONE-TIME]' : '[REPEATING]';
+          fileContent += `  - TASK: ${item.taskTitle.toUpperCase()} ${typeLabel}\n`;
+          fileContent += `    Status: ${item.status.toUpperCase()}\n`;
+          if (item.taskType === 'repeating' && item.targetCount > 1) {
+            fileContent += `    Progress: ${item.count}/${item.targetCount} units\n`;
+          }
+          const noteText = item.note ? item.note.replace(/\n/g, '\n    ') : '(None)';
+          fileContent += `    Note:\n    ${noteText}\n`;
+          fileContent += `  ---------------------------------------\n`;
+        });
+        fileContent += `\n`;
+      });
+
+      const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const startTag = exportStartDate ? exportStartDate : 'start';
+      const endTag = exportEndDate ? exportEndDate : 'end';
+      link.download = `all_tasks_daily_notes_${startTag}_to_${endTag}.txt`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Notes exported successfully!');
+    } catch (err) {
+      toast.error('Failed to export notes.');
+    }
   };
 
   const handleCreateCategory = async () => {
@@ -132,6 +251,52 @@ const Settings = () => {
             <button onClick={() => handleExport('json')} className="btn-secondary flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center"><Download className="w-4 h-4" /> Export JSON</button>
             <button onClick={() => handleExport('csv')} className="btn-secondary flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center"><Download className="w-4 h-4" /> Export CSV</button>
           </div>
+        </div>
+
+        {/* Daily Notes Export */}
+        <div className="card p-6 space-y-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2"><Download className="w-5 h-5 text-black dark:text-white" /> Global Daily Notes Export</h2>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            Export all daily custom notes from all repeating tasks in a single date-wise chronologically sorted text file.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+            <div>
+              <label className="block text-xs font-black uppercase tracking-wider mb-1">Start Date</label>
+              <input 
+                type="date" 
+                value={exportStartDate} 
+                onChange={(e) => setExportStartDate(e.target.value)} 
+                className="input-field" 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black uppercase tracking-wider mb-1">End Date</label>
+              <input 
+                type="date" 
+                value={exportEndDate} 
+                onChange={(e) => setExportEndDate(e.target.value)} 
+                className="input-field" 
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 py-1">
+            <input 
+              type="checkbox" 
+              id="include-one-time-toggle" 
+              checked={includeOneTime} 
+              onChange={(e) => setIncludeOneTime(e.target.checked)} 
+              className="w-4 h-4 border-2 border-black dark:border-white accent-black dark:accent-white cursor-pointer"
+            />
+            <label htmlFor="include-one-time-toggle" className="text-xs font-black uppercase tracking-wider cursor-pointer select-none">
+              Include One-Time Task Notes
+            </label>
+          </div>
+          <button 
+            onClick={handleExportGlobalNotes} 
+            className="btn-primary flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center"
+          >
+            <Download className="w-4 h-4" /> Export All Notes (.txt)
+          </button>
         </div>
 
         {/* Danger Zone */}

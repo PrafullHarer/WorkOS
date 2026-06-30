@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Flame, CheckCircle2, Activity, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Flame, CheckCircle2, Activity, ChevronLeft, ChevronRight, X, FileText } from 'lucide-react';
 import { formatDate, getDaysInMonth, getFirstDayOfMonth } from '../utils/dateHelpers';
 import { useTaskContext } from '../context/TaskContext';
 import { taskAPI } from '../api';
@@ -14,13 +14,15 @@ const MONTHS = [
 const TaskDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { completeOccurrence, skipOccurrence } = useTaskContext();
+  const { completeOccurrence, skipOccurrence, updateOccurrenceNote } = useTaskContext();
 
   const [task, setTask] = useState(null);
   const [loadingTask, setLoadingTask] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedDayMenu, setSelectedDayMenu] = useState(null);
+  const [selectedDayNote, setSelectedDayNote] = useState(null);
+  const [noteInput, setNoteInput] = useState('');
 
   const loadTask = useCallback(async () => {
     setLoadingTask(true);
@@ -41,7 +43,30 @@ const TaskDetail = () => {
     setCurrentMonth(todayDate.getMonth());
     setCurrentYear(todayDate.getFullYear());
     setSelectedDayMenu(null);
+    setSelectedDayNote(null);
   }, [loadTask]);
+
+  // Sync note input when selection changes
+  useEffect(() => {
+    if (selectedDayNote) {
+      const comp = (task?.completions || []).find(c => c.date === selectedDayNote.dateStr);
+      setNoteInput(comp?.note || '');
+    } else {
+      setNoteInput('');
+    }
+  }, [selectedDayNote, task?.completions]);
+
+  const handleSaveNote = async (noteVal) => {
+    if (!selectedDayNote || !task) return;
+    try {
+      const res = await updateOccurrenceNote(task._id, selectedDayNote.dateStr, noteVal);
+      if (res?.task) {
+        setTask({ ...res.task, streak: res.streak, weeklyProgress: res.weeklyProgress });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   if (loadingTask) {
     return (
@@ -151,6 +176,40 @@ const TaskDetail = () => {
     }
   };
 
+  const handleExportNotes = () => {
+    const completions = task.completions || [];
+    const notesCompletions = [...completions]
+      .filter(c => (c.note && c.note.trim() !== '') || c.status === 'done' || (c.count !== undefined && c.count >= 1))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (notesCompletions.length === 0) return;
+
+    let fileContent = `TASK: ${task.title.toUpperCase()}\n`;
+    fileContent += `Exported Notes & Completed Statuses (Day-wise)\n`;
+    fileContent += `Generated on: ${new Date().toLocaleDateString()}\n`;
+    fileContent += `=========================================\n\n`;
+
+    notesCompletions.forEach((compItem) => {
+      fileContent += `Date: ${formatTimelineDate(compItem.date)} (${compItem.date})\n`;
+      fileContent += `Status: ${compItem.status.toUpperCase()}\n`;
+      if (task.targetCount > 1) {
+        fileContent += `Progress: ${compItem.count || 0}/${task.targetCount} units\n`;
+      }
+      fileContent += `Note:\n${compItem.note || '(None)'}\n`;
+      fileContent += `-----------------------------------------\n\n`;
+    });
+
+    const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${task.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_daily_notes.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex-1 space-y-6 max-w-7xl mx-auto w-full p-4 lg:p-8">
       {/* Back button */}
@@ -230,9 +289,11 @@ const TaskDetail = () => {
             </div>
           )}
 
-          {/* Habit Calendar Grid */}
-          {task.type === 'repeating' && (
-            <div className="border-2 border-black dark:border-white p-3 bg-white dark:bg-neutral-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
+          {/* Calendar & Timeline Layout */}
+          {task.type === 'repeating' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Habit Calendar Grid */}
+              <div className="lg:col-span-7 xl:col-span-8 border-2 border-black dark:border-white p-3 bg-white dark:bg-neutral-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
               {/* Calendar Header */}
               <div className="flex flex-col sm:flex-row gap-3 justify-between sm:items-center mb-4">
                 <h3 className="text-xl lg:text-2xl font-black uppercase tracking-tight flex items-center gap-2">
@@ -305,6 +366,10 @@ const TaskDetail = () => {
 
                   let cellClass = "aspect-square border-2 flex flex-col justify-between p-1 sm:p-1.5 font-mono transition-all relative ";
 
+                  if (selectedDayMenu?.dateStr === dateStr) {
+                    cellClass += "z-20 ";
+                  }
+
                   if (isEditable) {
                     cellClass += "hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] cursor-pointer ";
                   } else {
@@ -345,11 +410,13 @@ const TaskDetail = () => {
                       className={cellClass}
                       onClick={() => {
                         if (isEditable) {
+                          const cellInfo = { day, dateStr };
                           setSelectedDayMenu(
                             selectedDayMenu?.dateStr === dateStr 
                               ? null 
-                              : { day, dateStr }
+                              : cellInfo
                           );
+                          setSelectedDayNote(cellInfo);
                         }
                       }}
                       title={
@@ -369,6 +436,9 @@ const TaskDetail = () => {
                       <span className={`text-xs sm:text-base ${isTodayCell ? 'font-black text-yellow-600 dark:text-yellow-400' : 'font-bold'}`}>
                         {day}
                       </span>
+                      {comp?.note && (
+                        <FileText className="absolute top-1 right-1 w-2.5 h-2.5 text-black/40 dark:text-white/40" />
+                      )}
                       <div className="text-[9px] sm:text-[10px] font-black text-right self-end leading-none">
                         {isDone && (
                           task.targetCount > 1 ? (
@@ -448,14 +518,70 @@ const TaskDetail = () => {
                   <span>No Progress (Today)</span>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Timeline History */}
-          <div className="border-2 border-black dark:border-white p-3.5 bg-white dark:bg-neutral-950 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
-            <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2 mb-4">
-              Timeline History
-            </h3>
+            </div>
+
+            {/* Right Column: Note Editor + Timeline History */}
+            <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+              {/* Note Editor */}
+              {selectedDayNote && (
+                <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-yellow-500" />
+                      Notes for {formatTimelineDate(selectedDayNote.dateStr)}
+                    </span>
+                    {noteInput && (
+                      <button
+                        onClick={() => {
+                          setNoteInput('');
+                          handleSaveNote('');
+                        }}
+                        className="text-[9px] text-red-500 hover:underline uppercase font-black tracking-wider cursor-pointer"
+                      >
+                        Clear Note
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-2 items-end">
+                    <textarea
+                      placeholder="Type custom note for this day... (Press Ctrl+Enter to save)"
+                      value={noteInput}
+                      onChange={(e) => setNoteInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          handleSaveNote(noteInput);
+                        }
+                      }}
+                      rows={2}
+                      className="flex-1 px-2.5 py-1.5 bg-white dark:bg-neutral-950 border border-black dark:border-white font-mono text-xs text-black dark:text-white resize-y min-h-[50px] leading-relaxed"
+                    />
+                    <button
+                      onClick={() => handleSaveNote(noteInput)}
+                      className="px-3.5 py-1.5 bg-yellow-400 hover:bg-yellow-500 border border-black font-mono text-xs font-black uppercase text-black cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[0.5px] hover:translate-y-[0.5px] transition-all"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Timeline History */}
+              <div className="border-2 border-black dark:border-white p-3.5 bg-white dark:bg-neutral-950 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
+             <div className="flex justify-between items-center mb-4">
+               <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
+                 Timeline History
+               </h3>
+               {completions.some(c => (c.note && c.note.trim() !== '') || c.status === 'done' || (c.count !== undefined && c.count >= 1)) && (
+                 <button
+                   onClick={handleExportNotes}
+                   className="px-2.5 py-1 bg-yellow-400 hover:bg-yellow-500 border-2 border-black font-mono text-[10px] font-black uppercase text-black cursor-pointer shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[0.5px] hover:translate-y-[0.5px] transition-all flex items-center gap-1"
+                 >
+                   <FileText className="w-3.5 h-3.5 text-black" /> Export Notes (.txt)
+                 </button>
+               )}
+             </div>
             
             <div className="relative pl-6 border-l-2 border-black dark:border-white space-y-4 max-h-[60vh] overflow-y-auto pr-2">
               {/* Task Started Marker */}
@@ -494,12 +620,87 @@ const TaskDetail = () => {
                         {eventLabel}
                         {compItem.status !== 'skipped' && task.targetCount > 1 && ` (${compItem.count}/${task.targetCount} units)`}
                       </h5>
+                      {compItem.note && (
+                        <div className="mt-1 text-xs text-black/60 dark:text-white/60 border-t border-dashed border-black/10 dark:border-white/10 pt-1 flex items-start gap-1 max-w-md">
+                          <FileText className="w-3.5 h-3.5 flex-shrink-0 text-yellow-500 mt-0.5" />
+                          <span className="italic whitespace-pre-line">"{compItem.note}"</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })
               )}
             </div>
           </div>
+        </div>
+      </div>
+    ) : (
+        /* Non-repeating task layout (full width timeline) */
+        <div className="border-2 border-black dark:border-white p-3.5 bg-white dark:bg-neutral-950 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
+              Timeline History
+            </h3>
+            {completions.some(c => c.note && c.note.trim() !== '') && (
+              <button
+                onClick={handleExportNotes}
+                className="px-2.5 py-1 bg-yellow-400 hover:bg-yellow-500 border-2 border-black font-mono text-[10px] font-black uppercase text-black cursor-pointer shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[0.5px] hover:translate-y-[0.5px] transition-all flex items-center gap-1"
+              >
+                <FileText className="w-3.5 h-3.5 text-black" /> Export Notes (.txt)
+              </button>
+            )}
+          </div>
+          
+          <div className="relative pl-6 border-l-2 border-black dark:border-white space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            {/* Task Started Marker */}
+            <div className="relative">
+              <div className="absolute -left-[31px] top-1 w-4 h-4 rounded-none bg-black dark:bg-white border-2 border-white dark:border-black" />
+              <p className="text-[10px] font-black uppercase text-black/55 dark:text-white/55 font-mono">
+                {formatTimelineDate(startDateStr)}
+              </p>
+              <h5 className="font-bold text-xs uppercase text-neutral-800 dark:text-neutral-200">Task Started</h5>
+            </div>
+
+            {/* Completion Timeline Nodes */}
+            {sortedCompletions.length === 0 ? (
+              <div className="text-xs font-bold text-black/40 dark:text-white/40 italic py-2">
+                No events logged yet
+              </div>
+            ) : (
+              sortedCompletions.map((compItem, index) => {
+                let badgeColor = "bg-emerald-400";
+                let eventLabel = "Completed";
+                if (compItem.status === 'skipped') {
+                  badgeColor = "bg-neutral-400";
+                  eventLabel = "Skipped";
+                } else if (compItem.status === 'todo' && compItem.count > 0) {
+                  badgeColor = "bg-emerald-200";
+                  eventLabel = "Progress Logged";
+                }
+
+                return (
+                  <div key={`${compItem.date}-${index}`} className="relative">
+                    <div className={`absolute -left-[31px] top-1 w-4 h-4 rounded-none ${badgeColor} border-2 border-black dark:border-white`} />
+                    <p className="text-[10px] font-black uppercase text-black/55 dark:text-white/55 font-mono">
+                      {formatTimelineDate(compItem.date)}
+                    </p>
+                    <h5 className="font-bold text-xs uppercase">
+                      {eventLabel}
+                      {compItem.status !== 'skipped' && task.targetCount > 1 && ` (${compItem.count}/${task.targetCount} units)`}
+                    </h5>
+                    {compItem.note && (
+                      <div className="mt-1 text-xs text-black/60 dark:text-white/60 border-t border-dashed border-black/10 dark:border-white/10 pt-1 flex items-start gap-1 max-w-md">
+                        <FileText className="w-3.5 h-3.5 flex-shrink-0 text-yellow-500 mt-0.5" />
+                        <span className="italic whitespace-pre-line">"{compItem.note}"</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

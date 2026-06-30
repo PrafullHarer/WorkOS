@@ -5,7 +5,7 @@ import TaskCard from '../components/TaskCard';
 import TaskModal from '../components/TaskModal';
 import TaskSkeleton from '../components/TaskSkeleton';
 import EmptyState from '../components/EmptyState';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, FileText } from 'lucide-react';
 
 const CalendarView = () => {
   const { tasks, occurrences, loading, fetchTasks, completeTask, completeOccurrence, skipOccurrence, deleteTask, fetchCategories } = useTaskContext();
@@ -116,7 +116,10 @@ const CalendarView = () => {
                 ...occurrences.filter(o => o.date === dateStr),
               ].filter(item => item.status !== 'skipped');
 
-              let cellClass = `h-16 lg:h-20 flex flex-col items-center justify-center gap-1 transition-all duration-150 text-base font-black cursor-pointer border-2 ${isSelected ? 'ring-4 ring-yellow-450 dark:ring-yellow-400 z-10 border-black dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} `;
+              const hasNotesOnDay = occurrences.some(o => o.date === dateStr && o.note && o.note.trim() !== '') ||
+                                    tasks.some(t => formatDate(t.dueDate) === dateStr && t.completions?.some(c => c.note && c.note.trim() !== ''));
+
+              let cellClass = `relative h-16 lg:h-20 flex flex-col items-center justify-center gap-1 transition-all duration-150 text-base font-black cursor-pointer border-2 ${isSelected ? 'ring-4 ring-yellow-450 dark:ring-yellow-400 z-10 border-black dark:border-white' : 'border-neutral-200 dark:border-neutral-800'} `;
 
               if (dayItems.length > 0) {
                 const allDone = dayItems.every(item => item.status === 'done');
@@ -146,6 +149,9 @@ const CalendarView = () => {
               return (
                 <button key={dateStr} onClick={() => setSelectedDate(dateStr)} className={cellClass}>
                   <span>{day}</span>
+                  {hasNotesOnDay && (
+                    <FileText className="absolute top-1 right-1 w-2.5 h-2.5 text-black/55 dark:text-white/55" />
+                  )}
                   {count > 0 && (
                     <div className="flex gap-0.5">
                       {Array.from({ length: Math.min(count, 3) }).map((_, i) => (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, Flame, CheckCircle2, Award, ClipboardList, Info, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Calendar, Flame, CheckCircle2, Award, ClipboardList, Info, Activity, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { formatDate, getDaysInMonth, getFirstDayOfMonth } from '../utils/dateHelpers';
 import { useTaskContext } from '../context/TaskContext';
 
@@ -9,11 +9,13 @@ const MONTHS = [
 ];
 
 const TaskInfoModal = ({ isOpen, onClose, task }) => {
-  const { repeatingTasks, completeOccurrence, skipOccurrence } = useTaskContext();
+  const { repeatingTasks, completeOccurrence, skipOccurrence, updateOccurrenceNote } = useTaskContext();
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [selectedDayMenu, setSelectedDayMenu] = useState(null);
+  const [selectedDayNote, setSelectedDayNote] = useState(null);
   const [showTimeline, setShowTimeline] = useState(false);
+  const [noteInput, setNoteInput] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -21,6 +23,7 @@ const TaskInfoModal = ({ isOpen, onClose, task }) => {
       setCurrentMonth(todayDate.getMonth());
       setCurrentYear(todayDate.getFullYear());
       setSelectedDayMenu(null);
+      setSelectedDayNote(null);
       setShowTimeline(false);
     }
   }, [isOpen, task?._id]);
@@ -28,6 +31,25 @@ const TaskInfoModal = ({ isOpen, onClose, task }) => {
   if (!isOpen || !task) return null;
 
   const activeTask = (task.type === 'repeating' && repeatingTasks.find(t => t._id.toString() === task._id.toString())) || task;
+
+  // Sync note input when selection changes
+  useEffect(() => {
+    if (selectedDayNote) {
+      const comp = (activeTask.completions || []).find(c => c.date === selectedDayNote.dateStr);
+      setNoteInput(comp?.note || '');
+    } else {
+      setNoteInput('');
+    }
+  }, [selectedDayNote, activeTask.completions]);
+
+  const handleSaveNote = async (noteVal) => {
+    if (!selectedDayNote) return;
+    try {
+      await updateOccurrenceNote(activeTask._id, selectedDayNote.dateStr, noteVal);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleCellAction = async (action, dateStr, e) => {
     if (e) e.stopPropagation();
@@ -114,14 +136,44 @@ const TaskInfoModal = ({ isOpen, onClose, task }) => {
     }
   };
 
+  const handleExportNotes = () => {
+    const completions = activeTask.completions || [];
+    const notesCompletions = [...completions]
+      .filter(c => (c.note && c.note.trim() !== '') || c.status === 'done' || (c.count !== undefined && c.count >= 1))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (notesCompletions.length === 0) return;
+
+    let fileContent = `TASK: ${activeTask.title.toUpperCase()}\n`;
+    fileContent += `Exported Notes & Completed Statuses (Day-wise)\n`;
+    fileContent += `Generated on: ${new Date().toLocaleDateString()}\n`;
+    fileContent += `=========================================\n\n`;
+
+    notesCompletions.forEach((compItem) => {
+      fileContent += `Date: ${formatTimelineDate(compItem.date)} (${compItem.date})\n`;
+      fileContent += `Status: ${compItem.status.toUpperCase()}\n`;
+      if (activeTask.targetCount > 1) {
+        fileContent += `Progress: ${compItem.count || 0}/${activeTask.targetCount} units\n`;
+      }
+      fileContent += `Note:\n${compItem.note || '(None)'}\n`;
+      fileContent += `-----------------------------------------\n\n`;
+    });
+
+    const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${activeTask.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_daily_notes.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div 
-        className={`modal-content max-w-xl w-full transition-all duration-200 ${
-          showTimeline 
-            ? 'max-h-[85vh] overflow-y-auto p-6 md:p-8' 
-            : 'max-h-none overflow-y-hidden p-5 md:p-6'
-        }`}
+        className="modal-content max-w-xl w-full transition-all duration-200 max-h-[85vh] overflow-y-auto p-5 md:p-6"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -268,6 +320,10 @@ const TaskInfoModal = ({ isOpen, onClose, task }) => {
 
                 let cellClass = "aspect-square border-2 flex flex-col justify-between p-1 sm:p-1.5 font-mono transition-all relative ";
 
+                if (selectedDayMenu?.dateStr === dateStr) {
+                  cellClass += "z-20 ";
+                }
+
                 if (isEditable) {
                   cellClass += "hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] cursor-pointer ";
                 } else {
@@ -303,11 +359,13 @@ const TaskInfoModal = ({ isOpen, onClose, task }) => {
                     className={cellClass}
                     onClick={() => {
                       if (isEditable) {
+                        const cellInfo = { day, dateStr };
                         setSelectedDayMenu(
                           selectedDayMenu?.dateStr === dateStr 
                             ? null 
-                            : { day, dateStr }
+                            : cellInfo
                         );
+                        setSelectedDayNote(cellInfo);
                       }
                     }}
                     title={
@@ -327,6 +385,9 @@ const TaskInfoModal = ({ isOpen, onClose, task }) => {
                     <span className={`text-[9px] sm:text-[10px] ${isTodayCell ? 'font-black text-yellow-600 dark:text-yellow-400' : 'font-bold'}`}>
                       {day}
                     </span>
+                    {comp?.note && (
+                      <FileText className="absolute top-0.5 right-0.5 w-2 h-2 text-black/40 dark:text-white/40" />
+                    )}
                     <div className="text-[7px] sm:text-[8px] font-black text-right self-end leading-none">
                       {isDone && (
                         activeTask.targetCount > 1 ? (
@@ -408,6 +469,50 @@ const TaskInfoModal = ({ isOpen, onClose, task }) => {
                 <span>Uncompleted</span>
               </div>
             </div>
+
+            {/* Note Editor */}
+            {selectedDayNote && (
+              <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-900 border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-yellow-500" />
+                    Notes for {formatTimelineDate(selectedDayNote.dateStr)}
+                  </span>
+                  {noteInput && (
+                    <button
+                      onClick={() => {
+                        setNoteInput('');
+                        handleSaveNote('');
+                      }}
+                      className="text-[9px] text-red-500 hover:underline uppercase font-black tracking-wider cursor-pointer"
+                    >
+                      Clear Note
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2 items-end">
+                  <textarea
+                    placeholder="Type custom note for this day... (Press Ctrl+Enter to save)"
+                    value={noteInput}
+                    onChange={(e) => setNoteInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        handleSaveNote(noteInput);
+                      }
+                    }}
+                    rows={2}
+                    className="flex-1 px-2.5 py-1.5 bg-white dark:bg-neutral-950 border border-black dark:border-white font-mono text-xs text-black dark:text-white resize-y min-h-[50px] leading-relaxed"
+                  />
+                  <button
+                    onClick={() => handleSaveNote(noteInput)}
+                    className="px-3.5 py-1.5 bg-yellow-400 hover:bg-yellow-500 border border-black font-mono text-xs font-black uppercase text-black cursor-pointer shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[0.5px] hover:translate-y-[0.5px] transition-all"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -424,9 +529,19 @@ const TaskInfoModal = ({ isOpen, onClose, task }) => {
         {/* Timeline */}
         {showTimeline && (
           <div>
-            <h3 className="text-lg font-black uppercase tracking-tight mb-4 flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-black dark:text-white" /> Timeline History
-            </h3>
+             <div className="flex justify-between items-center mb-4">
+               <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
+                 <ClipboardList className="w-5 h-5 text-black dark:text-white" /> Timeline History
+               </h3>
+               {activeTask.completions?.some(c => (c.note && c.note.trim() !== '') || c.status === 'done' || (c.count !== undefined && c.count >= 1)) && (
+                 <button
+                   onClick={handleExportNotes}
+                   className="px-2.5 py-1 bg-yellow-400 hover:bg-yellow-500 border-2 border-black font-mono text-[10px] font-black uppercase text-black cursor-pointer shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[0.5px] hover:translate-y-[0.5px] transition-all flex items-center gap-1"
+                 >
+                   <FileText className="w-3.5 h-3.5 text-black" /> Export Notes (.txt)
+                 </button>
+               )}
+             </div>
 
             <div className="border-l-4 border-black dark:border-white ml-3.5 pl-6 space-y-5 relative py-2">
               {/* Active completions history */}
@@ -466,6 +581,12 @@ const TaskInfoModal = ({ isOpen, onClose, task }) => {
                             {formatTimelineDate(comp.date)}
                           </span>
                         </div>
+                        {comp.note && (
+                          <div className="mt-2 text-xs text-black/60 dark:text-white/60 border-t border-dashed border-black/10 dark:border-white/10 pt-1.5 flex items-start gap-1">
+                            <FileText className="w-3.5 h-3.5 flex-shrink-0 text-yellow-500 mt-0.5" />
+                            <span className="italic whitespace-pre-line">"{comp.note}"</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

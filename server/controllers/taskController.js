@@ -220,7 +220,7 @@ const updateTask = asyncHandler(async (req, res) => {
 
   const allowedFields = [
     'title', 'description', 'type', 'priority', 'status', 'dueDate',
-    'category', 'tags', 'recurrence', 'reminderMinutes', 'order', 'targetCount',
+    'category', 'tags', 'recurrence', 'reminderMinutes', 'order', 'targetCount', 'note',
   ];
 
   allowedFields.forEach((field) => {
@@ -442,6 +442,44 @@ const getTaskById = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Update custom note for a specific day of a repeating task
+// @route   PATCH /api/tasks/:id/note/:date
+const updateOccurrenceNote = asyncHandler(async (req, res) => {
+  const { date } = req.params;
+  const { note } = req.body;
+  const task = await Task.findOne({ _id: req.params.id, userId: req.user._id });
+
+  if (!task) {
+    return res.status(404).json({ error: 'Task not found.' });
+  }
+
+  if (task.type !== 'repeating') {
+    return res.status(400).json({ error: 'Task is not a repeating task.' });
+  }
+
+  const existingIndex = task.completions.findIndex((c) => c.date === date);
+
+  if (existingIndex >= 0) {
+    task.completions[existingIndex].note = note || '';
+    // Clean up if it's back to default todo state with no note and no count
+    if (task.completions[existingIndex].status === 'todo' && !task.completions[existingIndex].note && task.completions[existingIndex].count === 0) {
+      task.completions.splice(existingIndex, 1);
+    }
+  } else if (note) {
+    task.completions.push({ date, status: 'todo', count: 0, note });
+  }
+
+  await task.save();
+  const populated = await task.populate('category', 'name color');
+  const clientDate = req.headers['x-client-date'] || formatDate(new Date());
+
+  res.json({
+    task: populated,
+    streak: calculateStreak(task, clientDate),
+    weeklyProgress: calculateWeeklyProgress(task, clientDate),
+  });
+});
+
 module.exports = {
   getTasks,
   getAllTasks,
@@ -456,4 +494,5 @@ module.exports = {
   reorderTasks,
   taskValidation,
   getTaskById,
+  updateOccurrenceNote,
 };

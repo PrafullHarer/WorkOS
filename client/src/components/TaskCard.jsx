@@ -1,13 +1,34 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Check, Trash2, Edit3, SkipForward, Repeat, Flame, MoreHorizontal, GripVertical, Info } from 'lucide-react';
+import { Check, Trash2, Edit3, SkipForward, Repeat, Flame, MoreHorizontal, GripVertical, Info, FileText } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useTaskContext } from '../context/TaskContext';
 
 const TaskCard = ({ task, isOccurrence, onComplete, onDelete, onEdit, onSkip, onIncrement, onInfo }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [flipUp, setFlipUp] = useState(false);
   const menuRef = useRef(null);
   const menuBtnRef = useRef(null);
+
+  const { updateTask } = useTaskContext();
+  const [showInlineNoteEditor, setShowInlineNoteEditor] = useState(false);
+  const [oneTimeNoteInput, setOneTimeNoteInput] = useState('');
+
+  const handleSaveOneTimeNote = async () => {
+    if (!task._id) return;
+    try {
+      await updateTask(task._id, { note: oneTimeNoteInput });
+      setShowInlineNoteEditor(false);
+    } catch {}
+  };
+
+  const handleClearOneTimeNote = async () => {
+    try {
+      setOneTimeNoteInput('');
+      await updateTask(task._id, { note: '' });
+      setShowInlineNoteEditor(false);
+    } catch {}
+  };
 
   const toggleMenu = useCallback(() => {
     if (!showMenu && menuBtnRef.current) {
@@ -94,6 +115,58 @@ const TaskCard = ({ task, isOccurrence, onComplete, onDelete, onEdit, onSkip, on
             )}
             {task.tags?.map(tag => <span key={tag} className="chip">{tag}</span>)}
           </div>
+
+          {showInlineNoteEditor && (
+            <div className="mt-3 p-3 bg-neutral-50 dark:bg-neutral-900 border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5 text-yellow-500" />
+                  Task Note
+                </span>
+                {oneTimeNoteInput && (
+                  <button
+                    onClick={handleClearOneTimeNote}
+                    className="text-[9px] text-red-500 hover:underline uppercase font-black tracking-wider cursor-pointer"
+                  >
+                    Clear Note
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2 items-end">
+                <textarea
+                  placeholder="Type note for this task..."
+                  value={oneTimeNoteInput}
+                  onChange={(e) => setOneTimeNoteInput(e.target.value)}
+                  rows={2}
+                  className="flex-1 px-2.5 py-1.5 bg-white dark:bg-neutral-950 border border-black dark:border-white font-mono text-xs text-black dark:text-white resize-y min-h-[50px] leading-relaxed"
+                />
+                <div className="flex flex-col gap-1 flex-shrink-0">
+                  <button
+                    onClick={handleSaveOneTimeNote}
+                    className="px-2.5 py-1 bg-yellow-450 hover:bg-yellow-500 border border-black font-mono text-[10px] font-black uppercase text-black cursor-pointer shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setShowInlineNoteEditor(false)}
+                    className="px-2.5 py-1 bg-white hover:bg-neutral-100 border border-black font-mono text-[10px] font-black uppercase text-black cursor-pointer shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-none transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!showInlineNoteEditor && task.note && (
+            <div className="mt-3 p-2.5 bg-yellow-50 dark:bg-neutral-900 border-2 border-dashed border-yellow-400 dark:border-yellow-600 text-xs flex items-start gap-1.5 max-w-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
+              <FileText className="w-4 h-4 flex-shrink-0 text-yellow-500 mt-0.5" />
+              <div className="flex-1">
+                <span className="font-mono font-black uppercase text-[9px] text-yellow-700 dark:text-yellow-400 block tracking-wider leading-none mb-0.5">Note:</span>
+                <p className="italic text-black/75 dark:text-white/75 whitespace-pre-line leading-relaxed font-bold">"{task.note}"</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -124,6 +197,18 @@ const TaskCard = ({ task, isOccurrence, onComplete, onDelete, onEdit, onSkip, on
                 <button onClick={() => { onEdit?.(task); setShowMenu(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-wider hover:bg-yellow-400 hover:text-black dark:hover:bg-yellow-400 dark:hover:text-black cursor-pointer transition-colors duration-100 text-left text-black dark:text-white">
                   <Edit3 className="w-3.5 h-3.5 flex-shrink-0" /> Edit
                 </button>
+                {!isOccurrence && task.type !== 'repeating' && (
+                  <button 
+                    onClick={() => { 
+                      setOneTimeNoteInput(task.note || '');
+                      setShowInlineNoteEditor(true); 
+                      setShowMenu(false); 
+                    }} 
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-wider hover:bg-yellow-400 hover:text-black dark:hover:bg-yellow-400 dark:hover:text-black cursor-pointer transition-colors duration-100 text-left text-black dark:text-white"
+                  >
+                    <FileText className="w-3.5 h-3.5 flex-shrink-0" /> Add/Edit Note
+                  </button>
+                )}
                 {isOccurrence && onSkip && (
                   <button onClick={() => { onSkip?.(task); setShowMenu(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-wider hover:bg-yellow-400 hover:text-black dark:hover:bg-yellow-400 dark:hover:text-black cursor-pointer transition-colors duration-100 text-left text-black dark:text-white">
                     <SkipForward className="w-3.5 h-3.5 flex-shrink-0" /> Skip

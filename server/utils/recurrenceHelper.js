@@ -56,10 +56,12 @@ const generateOccurrences = (task, rangeStart, rangeEnd) => {
   const dates = getDatesBetween(effectiveStart, effectiveEnd);
   const completionsMap = {};
   const completionsCountMap = {};
+  const completionsNoteMap = {};
   if (task.completions) {
     task.completions.forEach((c) => {
       completionsMap[c.date] = c.status;
       completionsCountMap[c.date] = c.count || 1;
+      completionsNoteMap[c.date] = c.note || '';
     });
   }
 
@@ -79,6 +81,7 @@ const generateOccurrences = (task, rangeStart, rangeEnd) => {
     date,
     status: completionsMap[date] || 'todo',
     count: completionsCountMap[date] || 0,
+    note: completionsNoteMap[date] || '',
     targetCount: task.targetCount || 1,
     isOccurrence: true,
     createdAt: task.createdAt,

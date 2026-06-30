@@ -45,6 +45,9 @@ The application layout has been refined to eliminate collisions and provide a se
 - **Authentication**: JWT-based (access + refresh tokens) stored securely in HTTP-only cookies.
 - **One-time Tasks**: Complete CRUD operations with priority levels, categories, tag arrays, and due dates.
 - **Repeating Tasks**: Daily recurring tasks with virtual occurrence generators and streak/Flame trackers.
+- **Daily Custom Notes**: Add rich multi-line daily custom notes to repeating task occurrences or directly to one-time tasks.
+- **Visual Note Indicators**: Integrated note indicators on calendar day cells and custom yellow-dashed cards on the dashboard and calendar.
+- **Bulk Notes Exporter**: Export all custom daily notes grouped chronologically date-wise in a `.txt` report, with custom date range filtering and optional toggle to include one-time task notes.
 - **Streaks & Progress**: Track daily streak flame counters and weekly progress completion levels.
 - **Interactive Calendar View**: Toggle between weekly and monthly calendar grids with clickable day navigations.
 - **Drag & Drop Reordering**: Reorder and prioritize daily task sequences with smooth animations via `@dnd-kit`.
@@ -125,6 +128,7 @@ npm run dev:server  # Runs Express server at http://localhost:5000
 | **PATCH** | `/:id/complete` | Toggle completion status for one-time tasks |
 | **PATCH** | `/:id/complete/:date`| Complete a repeating task occurrence on a specific date |
 | **PATCH** | `/:id/skip/:date` | Skip a repeating task occurrence on a specific date |
+| **PATCH** | `/:id/note/:date` | Update custom daily notes for repeating task occurrences |
 | **PATCH** | `/bulk` | Bulk delete or mark tasks as completed |
 | **PATCH** | `/reorder` | Update task array sequence order (DND) |
 | **GET** | `/summary` | Get task progress statistics for dashboard |

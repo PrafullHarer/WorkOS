@@ -15,6 +15,10 @@ const completionSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    note: {
+      type: String,
+      default: '',
+    },
   },
   { _id: false }
 );
@@ -91,6 +95,10 @@ const taskSchema = new mongoose.Schema(
     order: {
       type: Number,
       default: 0,
+    },
+    note: {
+      type: String,
+      default: '',
     },
   },
   {

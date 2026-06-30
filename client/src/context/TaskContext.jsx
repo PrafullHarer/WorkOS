@@ -159,6 +159,40 @@ export const TaskProvider = ({ children }) => {
     }
   };
 
+  const updateOccurrenceNote = async (id, date, note) => {
+    try {
+      const { data } = await taskAPI.updateOccurrenceNote(id, date, note);
+      const completion = data.task.completions.find(c => c.date === date);
+      const newStatus = completion ? completion.status : 'todo';
+      const newCount = completion ? (completion.count !== undefined ? completion.count : 1) : 0;
+      const newNote = completion ? completion.note : '';
+
+      setOccurrences((prev) =>
+        prev.map((o) =>
+          o.taskId.toString() === id.toString()
+            ? {
+                ...o,
+                ...(o.date === date ? { status: newStatus, count: newCount, note: newNote } : {}),
+                streak: data.streak,
+                weeklyProgress: data.weeklyProgress,
+              }
+            : o
+        )
+      );
+      setRepeatingTasks((prev) =>
+        prev.map((t) =>
+          t._id.toString() === id.toString()
+            ? { ...t, completions: data.task.completions, streak: data.streak, weeklyProgress: data.weeklyProgress }
+            : t
+        )
+      );
+      toast.success('Note updated!');
+      return data;
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update note'));
+    }
+  };
+
   const bulkAction = async (action) => {
     if (selectedTasks.length === 0) {
       toast.error('No tasks selected');
@@ -254,6 +288,7 @@ export const TaskProvider = ({ children }) => {
         completeTask,
         completeOccurrence,
         skipOccurrence,
+        updateOccurrenceNote,
         bulkAction,
         reorderTasks,
         createCategory,
